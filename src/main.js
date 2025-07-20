@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import './styles/style.css';
 
 // 全局配置常量
 const CONFIG = {
