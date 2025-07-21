@@ -166,15 +166,6 @@ class Example extends Phaser.Scene {
         });
     }
 
-    // 玩家获得钥匙（可在碰撞检测或收集逻辑中调用此方法）
-    collectKey(keySprite) {
-        if (!this.hasKey) {
-            this.hasKey = true;
-            keySprite.setVisible(false);
-            this.updateInventory();
-        }
-    }
-
     createLockedChests() {
         createObjectsFromTiled({
             scene: this,
@@ -290,6 +281,15 @@ class Example extends Phaser.Scene {
         }
         if (this.SignTip) {
             this.SignTip.update(tipText, signFound);
+        }
+    }
+
+    // 玩家获得钥匙（可在碰撞检测或收集逻辑中调用此方法）
+    collectKey(keySprite) {
+        if (!this.hasKey) {
+            this.hasKey = true;
+            keySprite.setVisible(false);
+            this.updateInventory();
         }
     }
 
