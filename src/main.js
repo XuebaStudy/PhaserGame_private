@@ -17,23 +17,23 @@ class Example extends Phaser.Scene {
     // 分数板UI创建
     createScoreBoard() {
         const pad = 8;
-        const w = 70, h = 32;
-        const x = this.cameras.main.width - w - pad;
+        const w = 75, h = 32;
+        const x = pad;
         const y = pad;
-        // 木板底色（半透明）
+        // 桦木风格底色（偏淡，半透明）
         this.scoreBg = this.add.graphics();
-        this.scoreBg.fillStyle(0x8B5A2B, 0.82); // 木色半透明（更不透明）
+        this.scoreBg.fillStyle(0xF5E9C6, 0.82); // 桦木色（淡黄白）
         this.scoreBg.fillRoundedRect(x, y, w, h, 10);
-        // 木板纹理（简单横线，半透明）
+        // 桦木纹理（横线，淡灰色，半透明）
         for (let i = 0; i < 4; i++) {
-            this.scoreBg.lineStyle(1, 0xA67C52, 0.55);
+            this.scoreBg.lineStyle(1, 0xD8CFC4, 0.55);
             this.scoreBg.beginPath();
             this.scoreBg.moveTo(x + 10, y + 8 + i * 7);
             this.scoreBg.lineTo(x + w - 10, y + 8 + i * 7);
             this.scoreBg.strokePath();
         }
-        // 边框（半透明）
-        this.scoreBg.lineStyle(3, 0x5C3317, 0.82);
+        // 边框（淡棕色，半透明）
+        this.scoreBg.lineStyle(3, 0xBCA77B, 0.82);
         this.scoreBg.strokeRoundedRect(x, y, w, h, 10);
         this.scoreBg.setScrollFactor(0);
         this.scoreBg.setDepth(CONFIG.DEPTH.foreground + 2);
@@ -41,9 +41,8 @@ class Example extends Phaser.Scene {
         this.scoreText = this.add.text(0, 0, 'Score: 0', {
             fontFamily: 'Arial Narrow',
             fontSize: '16px',
-            color: '#ffffff',
-            stroke: '#5C3317',
-            strokeThickness: 2,
+            fontStyle: 'bold',
+            color: "#000000",
             align: 'center',
         });
         // 居中分数文字
@@ -279,19 +278,8 @@ class Example extends Phaser.Scene {
         this.createControls();
         this.createCamera();
         this.createInventoryUI();
-        // 分数板UI封装
         this.createScoreBoard();
-        // 添加文字显示，位置根据镜头和界面常数设置
-        this.uiText = this.add.text(16, 16, 'Collect key, and open the chest!', {
-            fontFamily: 'Arial Narrow, Consolas, Courier New, Lucida Console, Menlo, Monaco, monospace',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            fill: '#000',
-            // stroke: '#222',
-            // strokeThickness: 2
-        });
-        // this.uiText.setScrollFactor(0);
-        this.uiText.setDepth(CONFIG.DEPTH.foreground);
+        this.createSignsWithTip();
     }
 
     // 创建物品栏UI（左侧半透明格子）
@@ -481,7 +469,59 @@ class Example extends Phaser.Scene {
             }
         });
     }
+    
+    // 批量创建告示牌对象并封装提示文字
+    createSignsWithTip() {
+        Example.createObjectsFromTiled({
+            scene: this,
+            arrayName: 'signs',
+            tilesetName: 'platformer_1',
+            propertyName: 'isSign',
+            propertyValue: true,
+            spriteKey: 'things',
+            customInit: (sign, obj, frameId) => {
+                let text = '';
+                if (Array.isArray(obj.properties)) {
+                    const textProp = obj.properties.find(p => p.name === 'text');
+                    if (textProp) text = textProp.value;
+                }
+                sign._signText = text;
+            }
+        });
+        // 创建提示文字对象
+        this.signTipText = this.add.text(this.cameras.main.width / 2, 48, '', {
+            fontFamily: 'Arial Narrow',
+            fontSize: '16px',
+            fontStyle: 'bold',
+            color: '#000000',
+            backgroundColor: '#fffbe6',
+            padding: { left: 8, right: 8, top: 4, bottom: 4 },
+            align: 'center',
+        });
+        this.signTipText.setOrigin(0.5, 0);
+        this.signTipText.setScrollFactor(0);
+        this.signTipText.setDepth(CONFIG.DEPTH.foreground + 10);
+        this.signTipText.setVisible(false);
+    }
 
+    // 告示牌提示文字逻辑
+    updateSignTipText() {
+        let signFound = false;
+        if (this.signs && this.signs.length) {
+            for (let i = 0; i < this.signs.length; i++) {
+                const sign = this.signs[i];
+                if (Example.checkBodyOverlap(this.player, sign)) {
+                    this.signTipText.setText(sign._signText || '');
+                    this.signTipText.setVisible(true);
+                    signFound = true;
+                    break;
+                }
+            }
+        }
+        if (!signFound) {
+            this.signTipText.setVisible(false);
+        }
+    }
 
     createControls() {
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -554,6 +594,10 @@ class Example extends Phaser.Scene {
                 }
             }
         }
+        // 告示牌提示文字逻辑
+        this.updateSignTipText();
+
+    
         // insect 随机游走动画
         if (this.insects && this.insects.length) {
             for (let i = 0; i < this.insects.length; i++) {
