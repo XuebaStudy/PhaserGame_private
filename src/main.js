@@ -14,6 +14,82 @@ const CONFIG = {
 };
 
 class Example extends Phaser.Scene {
+    // 分数板UI创建
+    createScoreBoard() {
+        const pad = 8;
+        const w = 70, h = 32;
+        const x = this.cameras.main.width - w - pad;
+        const y = pad;
+        // 木板底色（半透明）
+        this.scoreBg = this.add.graphics();
+        this.scoreBg.fillStyle(0x8B5A2B, 0.82); // 木色半透明（更不透明）
+        this.scoreBg.fillRoundedRect(x, y, w, h, 10);
+        // 木板纹理（简单横线，半透明）
+        for (let i = 0; i < 4; i++) {
+            this.scoreBg.lineStyle(1, 0xA67C52, 0.55);
+            this.scoreBg.beginPath();
+            this.scoreBg.moveTo(x + 10, y + 8 + i * 7);
+            this.scoreBg.lineTo(x + w - 10, y + 8 + i * 7);
+            this.scoreBg.strokePath();
+        }
+        // 边框（半透明）
+        this.scoreBg.lineStyle(3, 0x5C3317, 0.82);
+        this.scoreBg.strokeRoundedRect(x, y, w, h, 10);
+        this.scoreBg.setScrollFactor(0);
+        this.scoreBg.setDepth(CONFIG.DEPTH.foreground + 2);
+        // 分数文字
+        this.scoreText = this.add.text(0, 0, 'Score: 0', {
+            fontFamily: 'Arial Narrow',
+            fontSize: '16px',
+            color: '#ffffff',
+            stroke: '#5C3317',
+            strokeThickness: 2,
+            align: 'center',
+        });
+        // 居中分数文字
+        this.scoreText.setScrollFactor(0);
+        this.scoreText.setDepth(CONFIG.DEPTH.foreground + 3);
+        this.scoreText.setOrigin(0.5, 0.5);
+        this.scoreText.x = x + w / 2;
+        this.scoreText.y = y + h / 2;
+    }
+
+    // 分数板UI刷新
+    updateScoreBoard() {
+        if (this.scoreText) {
+            this.scoreText.setText('Score: ' + this.score);
+        }
+    }
+    // 播放宝箱开启动画
+    openChest(chestSprite) {
+        // 只允许未打开的宝箱触发
+        if (chestSprite._isOpened) return;
+        chestSprite._isOpened = true;
+        // 播放交替动画（10、11帧），最后变为9帧
+        let frameList = [10, 11];
+        let frameIdx = 0;
+        let repeatCount = 0;
+        const maxRepeat = 6; // 动画交替次数
+        const animate = () => {
+            if (repeatCount < maxRepeat) {
+                chestSprite.setFrame(frameList[frameIdx % 2]);
+                frameIdx++;
+                repeatCount++;
+                this.time.delayedCall(80, animate);
+            } else {
+                chestSprite.setFrame(9); // 最终打开状态
+                // 动画结束后生成钻石
+                const diamondFrame = 67;
+                const diamond = this.physics.add.sprite(chestSprite.x, chestSprite.y - chestSprite.body.height - 12, 'things', diamondFrame);
+                diamond.setDepth(CONFIG.DEPTH.thing + 1);
+                diamond.body.allowGravity = false;
+                diamond._isDiamond = true;
+                this.diamonds = this.diamonds || [];
+                this.diamonds.push(diamond);
+            }
+        };
+        animate();
+    }
     // 通用工厂：批量创建对象
     static createObjectsFromTiled({
         scene,
@@ -22,7 +98,8 @@ class Example extends Phaser.Scene {
         propertyName,
         propertyValue = true,
         spriteKey,
-        customInit
+        customInit,
+        isStatic = true
     }) {
         scene[arrayName] = [];
         scene.layers.object = scene.maps.map.getObjectLayer('object');
@@ -39,8 +116,16 @@ class Example extends Phaser.Scene {
                 propertyValue
             });
             if (match) {
-                const sprite = scene.physics.add.sprite(obj.x + obj.width / 2, obj.y - obj.height / 2, spriteKey, frameId);
-                sprite.body.allowGravity = false;
+                // 所有对象都用 sprite 创建
+                let sprite = scene.physics.add.sprite(obj.x + obj.width / 2, obj.y - obj.height / 2, spriteKey, frameId);
+                // 如果是静态体，设置 immovable、moves=false、allowGravity=false
+                if (isStatic) {
+                    sprite.body.immovable = true;
+                    sprite.body.moves = false;
+                    sprite.body.allowGravity = false;
+                } else {
+                    sprite.body.allowGravity = false;
+                }
                 sprite.setDepth(CONFIG.DEPTH.thing);
                 Example.setObjectCollisionBox(obj, sprite, scene.maps.map);
                 if (customInit) customInit(sprite, obj, frameId);
@@ -59,43 +144,6 @@ class Example extends Phaser.Scene {
             return tileObj.properties.some(p => p.name === propertyName && p.value === propertyValue);
         }
         return false;
-    }
-
-    // 静态工具：通用tile碰撞检测
-    static checkTileCollision({rect, filterFn, callbackFn, map, layer}) {
-        const tilemap = map;
-        if (!tilemap || !layer || !layer.data) return;
-        const tilesetArr = tilemap.tilesets;
-        layer.data.forEach(row => {
-            row.forEach(tile => {
-                if (tile && filterFn(tile)) {
-                    const worldX = tile.getLeft();
-                    const worldY = tile.getTop();
-                    let tileRect = null;
-                    const tileset = tilesetArr.find(ts => tile.index >= ts.firstgid && tile.index < ts.firstgid + ts.total);
-                    if (tileset) {
-                        const frameId = tile.index - tileset.firstgid;
-                        const tileInfo = tileset.tileData && tileset.tileData[frameId];
-                        const objectgroup = tileInfo && tileInfo.objectgroup;
-                        if (objectgroup && objectgroup.objects && objectgroup.objects.length > 0) {
-                            const box = objectgroup.objects[0];
-                            tileRect = new Phaser.Geom.Rectangle(
-                                worldX + box.x,
-                                worldY + box.y,
-                                box.width,
-                                box.height
-                            );
-                        }
-                    }
-                    if (!tileRect) {
-                        tileRect = new Phaser.Geom.Rectangle(worldX, worldY, tile.width, tile.height);
-                    }
-                    if (Phaser.Geom.Intersects.RectangleToRectangle(rect, tileRect)) {
-                        callbackFn(tile, tileRect);
-                    }
-                }
-            });
-        });
     }
 
     // 静态工具：根据 Tiled 对象或 tile 设置碰撞体，自动兼容 object/tile 两种输入
@@ -165,6 +213,16 @@ class Example extends Phaser.Scene {
         this.insects = [];
         this.spikes = [];
         this.springs = [];
+        this.diamonds = [];
+
+        // 物品栏相关
+        this.inventoryUI = null;
+        this.inventorySlots = [];
+        this.inventoryIcons = [];
+        this.hasKey = false;
+
+        // 分数
+        this.score = 0;
     }
 
     playerDie() {
@@ -220,6 +278,9 @@ class Example extends Phaser.Scene {
         this.createSpikes();
         this.createControls();
         this.createCamera();
+        this.createInventoryUI();
+        // 分数板UI封装
+        this.createScoreBoard();
         // 添加文字显示，位置根据镜头和界面常数设置
         this.uiText = this.add.text(16, 16, 'Collect key, and open the chest!', {
             fontFamily: 'Arial Narrow, Consolas, Courier New, Lucida Console, Menlo, Monaco, monospace',
@@ -231,6 +292,75 @@ class Example extends Phaser.Scene {
         });
         // this.uiText.setScrollFactor(0);
         this.uiText.setDepth(CONFIG.DEPTH.foreground);
+    }
+
+    // 创建物品栏UI（左侧半透明格子）
+    createInventoryUI() {
+        const slotCount = 3;
+        const slotSize = 28;
+        const slotMargin = 0;
+        const startX = 4;
+        const startY = 80;
+        this.inventorySlots = [];
+        this.inventoryIcons = [];
+        // 用 Graphics 绘制半透明格子
+        for (let i = 0; i < slotCount; i++) {
+            const g = this.add.graphics();
+            g.fillStyle(0x000000, 0.35);
+            g.fillRoundedRect(startX, startY + i * (slotSize + slotMargin), slotSize, slotSize, 8);
+            g.lineStyle(2, 0xffffff, 0.5);
+            g.strokeRoundedRect(startX, startY + i * (slotSize + slotMargin), slotSize, slotSize, 8);
+            g.setDepth(CONFIG.DEPTH.foreground);
+            g.setScrollFactor(0);
+            this.inventorySlots.push(g);
+            // 默认隐藏物品图标
+            const icon = this.add.image(startX + slotSize / 2, startY + i * (slotSize + slotMargin) + slotSize / 2, 'things', 0);
+            icon.setVisible(false);
+            icon.setDepth(CONFIG.DEPTH.foreground + 1);
+            icon.setScrollFactor(0);
+            icon.setScale(1.0);
+            this.inventoryIcons.push(icon);
+        }
+    }
+
+    // 更新物品栏UI（显示钥匙图标）
+    updateInventoryUI() {
+        // 只在第一个格子显示钥匙图标
+        if (this.hasKey) {
+            // 通用方法获取钥匙帧号
+            const keyFrameId = Example.getItemFrameId(this, 'platformer_1', 'isKey', true);
+            this.inventoryIcons[0].setFrame(keyFrameId);
+            this.inventoryIcons[0].setVisible(true);
+        } else {
+            this.inventoryIcons[0].setVisible(false);
+        }
+    }
+
+    /**
+     * 通用方法：获取第一个具有指定属性的帧号
+     * @param {Phaser.Scene} scene - 当前场景
+     * @param {string} tilesetName - tileset名称
+     * @param {string} propertyName - 属性名（如'isKey', 'isSpring', 'isLockedChest'等）
+     * @param {any} propertyValue - 属性值（通常为true）
+     * @returns {number} 帧号（未找到则返回0）
+     */
+    static getItemFrameId(scene, tilesetName, propertyName, propertyValue = true) {
+        const rawMap = scene.cache.tilemap.get('map1').data;
+        const tileset = rawMap.tilesets.find(ts => ts.name === tilesetName);
+        if (!tileset || !tileset.tiles) return 0;
+        for (let i = 0; i < tileset.tiles.length; i++) {
+            const frameId = tileset.tiles[i].id;
+            if (Example.getTilePropertyFromRawTileset({
+                mapCache: rawMap,
+                tilesetName,
+                frameId,
+                propertyName,
+                propertyValue
+            })) {
+                return frameId;
+            }
+        }
+        return 0;
     }
 
     createMap() {
@@ -311,13 +441,26 @@ class Example extends Phaser.Scene {
         });
     }
 
+    // 玩家获得钥匙（可在碰撞检测或收集逻辑中调用此方法）
+    collectKey(keySprite) {
+        if (!this.hasKey) {
+            this.hasKey = true;
+            keySprite.setVisible(false);
+            this.updateInventoryUI();
+        }
+    }
+
     createLockedChests() {
         Example.createObjectsFromTiled({
             scene: this,
             arrayName: 'lockedChests',
             tilesetName: 'platformer_1',
             propertyName: 'isLockedChest',
-            spriteKey: 'things'
+            spriteKey: 'things',
+            isStatic: true,
+            customInit: (chest, obj, frameId) => {
+                this.physics.add.collider(this.player, chest);
+            }
         });
     }
 
@@ -455,7 +598,45 @@ class Example extends Phaser.Scene {
             }
         }
 
-        // 梯子检测（如需碰撞框可用 checkTileCollision，当前用点检测）
+        // 宝箱开启动画与钥匙消耗
+        if (this.lockedChests && this.lockedChests.length && this.hasKey) {
+            for (let i = 0; i < this.lockedChests.length; i++) {
+                const chest = this.lockedChests[i];
+                if (!chest._isOpened && Example.checkBodyOverlap(this.player, chest)) {
+                    this.hasKey = false;
+                    this.updateInventoryUI();
+                    this.openChest(chest);
+                    break;
+                }
+            }
+        }
+        // 钻石收集判定
+        if (this.diamonds && this.diamonds.length) {
+            for (let i = 0; i < this.diamonds.length; i++) {
+                const diamond = this.diamonds[i];
+                if (diamond.visible && Example.checkBodyOverlap(this.player, diamond)) {
+                    diamond.setVisible(false);
+                    this.score += 10;
+                    this.updateScoreBoard();
+                }
+            }
+        }
+
+        // 检查玩家是否获得钥匙（与钥匙碰撞）
+        if (this.keys && this.keys.length && !this.hasKey) {
+            for (let i = 0; i < this.keys.length; i++) {
+                const keySprite = this.keys[i];
+                if (keySprite.visible && Example.checkBodyOverlap(this.player, keySprite)) {
+                    this.collectKey(keySprite);
+                    break;
+                }
+            }
+        }
+
+        // 更新物品栏UI（防止UI丢失）
+        this.updateInventoryUI();
+
+        // 梯子检测
         let onLadder = false;
         const ladderTile = this.layers.thing.getTileAtWorldXY(this.player.x, this.player.y + this.player.body.height / 2);
         if (ladderTile && ladderTile.properties && ladderTile.properties.isLadder === true) {
