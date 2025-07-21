@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import './styles/style.css';
 
+import { createObjectsFromTiled, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
+import { ScoreBoard } from './game/ui/ScoreBoard.js';
+import { Inventory } from './game/ui/Inventory.js';
+import { SignTip } from './game/ui/SignTip.js';
+import { Player } from './game/object/Player.js';
+import { Insect } from './game/object/Insect.js';
+
 // 全局配置常量
 const CONFIG = {
     PLAYER_SPAWN: { x: 50, y: 150 },
@@ -13,41 +20,16 @@ const CONFIG = {
     }
 };
 
-import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
-import { ScoreBoard } from './game/ui/ScoreBoard.js';
-import { Inventory } from './game/ui/Inventory.js';
-import { SignTip } from './game/ui/SignTip.js';
-import { Player } from './game/object/Player.js';
-import { Insect } from './game/object/Insect.js';
-
 class Example extends Phaser.Scene {
     constructor() {
         super();
-        this.player = null;
-        this.cursors = null;
-        this.wasdKeys = null;
         this.maps = {};
         this.tiles = {};
         this.layers = {};
         this.colliders = {};
 
-        this.keys = [];
-        this.lockedChests = [];
-        this.insects = [];
-        this.spikes = [];
-        this.springs = [];
-        this.diamonds = [];
-
-        // 物品栏相关
-        this.Inventory = null;
         this.hasKey = false;
-
-        // 分数
         this.score = 0;
-        // 分数板
-        this.ScoreBoard = null;
-        // 告示牌提示
-        this.SignTip = null;
     }
 
     preload () {
@@ -70,6 +52,7 @@ class Example extends Phaser.Scene {
         Insect.createInsectsFromTiled(this);
         this.createSprings();
         this.createSpikes();
+        this.createCoins();
         this.createControls();
         this.createCamera();
         this.createInventory();
@@ -77,6 +60,8 @@ class Example extends Phaser.Scene {
         this.SignTip = new SignTip(this, CONFIG);
         this.createSignsWithTip();
     }
+
+
 
     // 创建物品栏UI（左侧半透明格子）
     createInventory() {
@@ -132,6 +117,23 @@ class Example extends Phaser.Scene {
                 spring.setFrame(107);
                 spring._springState = 'normal';
                 spring._springObj = obj;
+            }
+        });
+    }
+
+    // 批量创建金币对象
+    createCoins() {
+        createObjectsFromTiled({
+            scene: this,
+            arrayName: 'coins',
+            tilesetName: 'platformer_1',
+            propertyName: 'isCoin',
+            propertyValue: true,
+            spriteKey: 'things',
+            customInit: (coin, obj) => {
+                coin.setFrame(151);
+                coin._coinAnimState = 0;
+                coin._coinAnimTimer = 0;
             }
         });
     }
@@ -345,6 +347,28 @@ class Example extends Phaser.Scene {
             }
         }
     
+        // coin动画与收集判定
+        if (this.coins && this.coins.length) {
+            for (let i = 0; i < this.coins.length; i++) {
+                const coin = this.coins[i];
+                // coin动画：151/152帧交替
+                coin._coinAnimTimer += delta;
+                if (coin._coinAnimTimer > 200) {
+                    coin._coinAnimState = 1 - coin._coinAnimState;
+                    coin.setFrame(coin._coinAnimState ? 152 : 151);
+                    coin._coinAnimTimer = 0;
+                }
+                // coin收集判定
+                if (coin.visible && checkBodyOverlap(this.player, coin)) {
+                    coin.setVisible(false);
+                    this.score += 2;
+                    if (this.ScoreBoard) {
+                        this.ScoreBoard.update(this.score);
+                    }
+                }
+            }
+        }
+
         // insect 随机游走
         if (this.insects && this.insects.length) {
             for (let i = 0; i < this.insects.length; i++) {
@@ -458,4 +482,5 @@ const config = {
     },
     scene: Example
 };
+
 new Phaser.Game(config);

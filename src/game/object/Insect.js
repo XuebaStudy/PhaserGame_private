@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { createObjectsFromTiled } from '../utils/GameUtils.js';
+
+import { setObjectCollisionBox } from '../utils/GameUtils.js';
 
 export class Insect extends Phaser.Physics.Arcade.Sprite {
     static createInsectsFromTiled(scene) {
@@ -39,6 +40,9 @@ export class Insect extends Phaser.Physics.Arcade.Sprite {
         this.setDepth(scene.CONFIG ? scene.CONFIG.DEPTH.thing + 1 : 2);
         this.anims.play('flying insect', true);
         this.body.allowGravity = false;
+        
+        // 设置碰撞框（使用Tiled对象属性）
+        setObjectCollisionBox(tiledObj, this, map);
 
         // 随机参数和初始状态
         this.setVelocity(0, 0);
