@@ -17,6 +17,7 @@ import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisi
 import { ScoreBoard } from './game/ui/ScoreBoard.js';
 import { Inventory } from './game/ui/Inventory.js';
 import { SignTip } from './game/ui/SignTip.js';
+import { Player } from './game/object/Player.js';
 
 class Example extends Phaser.Scene {
     // 分数板创建
@@ -93,38 +94,6 @@ class Example extends Phaser.Scene {
         this.SignTip = null;
     }
 
-    playerDie() {
-        // 死亡动画：更明显的闪烁，死亡期间禁用输入
-        if (this._isDying) return;
-        this._isDying = true;
-        this.player.setVelocity(0, 0);
-        this.player.body.enable = false; // 禁用物理体，防止移动
-        let flashCount = 0;
-        const maxFlash = 8;
-        const flash = () => {
-            if (!this.player) return;
-            if (flashCount % 2 === 0) {
-                this.player.setTint(0xffffff);
-                this.player.setAlpha(1);
-            } else {
-                this.player.setTint(0x000000);
-                this.player.setAlpha(0.3);
-            }
-            flashCount++;
-            if (flashCount < maxFlash) {
-                this.time.delayedCall(70, flash);
-            } else {
-                this.player.clearTint();
-                this.player.setAlpha(1);
-                this.player.setPosition(CONFIG.PLAYER_SPAWN.x, CONFIG.PLAYER_SPAWN.y);
-                this.player.body.enable = true;
-                this._isDying = false;
-            }
-        };
-        flash();
-    }
-
-
     preload () {
         this.load.image('platform_img', '/assets/Tiled/Tilemap/platformer_1.png');
         this.load.tilemapTiledJSON('map1', '/assets/Tiled/map1.json');
@@ -200,10 +169,8 @@ class Example extends Phaser.Scene {
     }
 
     createPlayer() {
-        this.player = this.physics.add.sprite(CONFIG.PLAYER_SPAWN.x, CONFIG.PLAYER_SPAWN.y, 'characters', 0);
-        this.player.setFlipX(true);
-        this.player.setDepth(CONFIG.DEPTH.player);
-        this.player.body.setSize(20, 22, true);
+        this.player = new Player(this, CONFIG);
+        this.add.existing(this.player);
         this.colliders.playerPlatform = this.physics.add.collider(this.player, this.layers.platform);
     }
 
@@ -438,7 +405,7 @@ class Example extends Phaser.Scene {
                 }
                 // 检测玩家与insect碰撞体重叠，重叠则死亡
                 if (checkBodyOverlap(this.player, insect)) {
-                    this.playerDie();
+                    this.player.die();
                     return;
                 }
             }
@@ -448,7 +415,7 @@ class Example extends Phaser.Scene {
         if (this.spikes && this.spikes.length) {
             for (let i = 0; i < this.spikes.length; i++) {
                 if (checkBodyOverlap(this.player, this.spikes[i])) {
-                    this.playerDie();
+                    this.player.die();
                     return;
                 }
             }
@@ -514,76 +481,12 @@ class Example extends Phaser.Scene {
             this.player.body.allowGravity = true;
         }
         
-        // 检查地面状态
-        const isOnGround = this.player.body.touching.down;
-        const isBlocked = this.player.body.blocked.down;
-        
-        // 下穿平台（S键）
-        if (this.colliders.playerPlatform) {
-            if (this.wasdKeys.S.isDown && (isOnGround || isBlocked)) {
-                this.colliders.playerPlatform.active = false;
-                this._dropFromPlatform = true;
-                // 强制给玩家一个向下速度，避免卡在平台内
-                this.player.setVelocityY(150);
-            }
-            if (this._dropFromPlatform) {
-                // 获取玩家正下方tile
-                const tile = this.layers.platform.getTileAtWorldXY(this.player.x, this.player.y + this.player.body.height / 2);
-                // 恢复碰撞
-                if (!tile || !tile.properties.isUpSolid) {
-                    this.colliders.playerPlatform.active = true;
-                    this._dropFromPlatform = false;
-                }
-            }
-        }
-        
-        // 跳跃控制（W键）
-        if (this.wasdKeys.W.isDown) {
-            if (isOnGround || isBlocked) {
-                this.player.setVelocityY(-200);
-            }
-        }
-        
-        // 人物左右移动控制（AD键）
-        const accel = 800; // 加速度
-        const maxSpeed = 160; // 最大速度
-        if (this.wasdKeys.A.isDown) {
-            this.player.setAccelerationX(-accel);
-            this.player.setFlipX(false);
-        } else if (this.wasdKeys.D.isDown) {
-            this.player.setAccelerationX(accel);
-            this.player.setFlipX(true);
-        } else {
-            this.player.setAccelerationX(0);
-            // 摩擦力减速
-            if (Math.abs(this.player.body.velocity.x) < 5) {
-                this.player.setVelocityX(0);
-            } else {
-                this.player.setVelocityX(this.player.body.velocity.x * 0.85);
-            }
-        }
-        // 限制最大速度
-        if (this.player.body.velocity.x > maxSpeed) this.player.setVelocityX(maxSpeed);
-        if (this.player.body.velocity.x < -maxSpeed) this.player.setVelocityX(-maxSpeed);
-
-        // 动画控制 - 根据状态优先级播放动画
-        const isGrounded = isOnGround || isBlocked;
-        if (!isGrounded) {
-            // 在空中 - 播放跳跃动画
-            this.player.anims.play('jump', true);
-        }
-        else if (this.wasdKeys.A.isDown || this.wasdKeys.D.isDown) {
-            // 在地面且移动 - 播放行走动画
-            this.player.anims.play('walk', true);
-        }
-        else {
-            // 在地面且静止 - 播放静止动画
-            this.player.anims.play('idle', true);
-        }
+        // 玩家控制更新
+        this.player.updateControls(this.wasdKeys, this.colliders, this.layers);
         
         // 掉出世界边界处理
         if (this.player.y > this.cameras.main.height) {
-            this.playerDie();
+            this.player.die();
         }
         // 左右边界限制（基于地图宽度和角色宽度）
         const halfW = this.player.body.width / 2;
