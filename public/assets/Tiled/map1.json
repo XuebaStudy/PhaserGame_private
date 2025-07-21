@@ -228,6 +228,66 @@
                  "width":18,
                  "x":35.75,
                  "y":181
+                }, 
+                {
+                 "gid":108,
+                 "height":18,
+                 "id":31,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":432,
+                 "y":162.5
+                }, 
+                {
+                 "gid":152,
+                 "height":18,
+                 "id":35,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":647.666666666667,
+                 "y":234.333333333333
+                }, 
+                {
+                 "gid":152,
+                 "height":18,
+                 "id":36,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":144.333333333333,
+                 "y":216.333333333333
+                }, 
+                {
+                 "gid":152,
+                 "height":18,
+                 "id":37,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":487,
+                 "y":89.6666666666667
+                }, 
+                {
+                 "gid":152,
+                 "height":18,
+                 "id":39,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":512.333333333333,
+                 "y":180.333333333333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -236,7 +296,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":31,
+ "nextobjectid":40,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
@@ -721,7 +781,13 @@
                      "visible":true,
                      "x":0,
                      "y":0
-                    }
+                    },
+                 "properties":[
+                        {
+                         "name":"isCoin",
+                         "type":"bool",
+                         "value":true
+                        }]
                 }, 
                 {
                  "id":152,
@@ -746,7 +812,13 @@
                      "visible":true,
                      "x":0,
                      "y":0
-                    }
+                    },
+                 "properties":[
+                        {
+                         "name":"isCoin",
+                         "type":"bool",
+                         "value":true
+                        }]
                 }],
          "tilewidth":18
         }, 

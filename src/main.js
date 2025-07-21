@@ -18,6 +18,7 @@ import { ScoreBoard } from './game/ui/ScoreBoard.js';
 import { Inventory } from './game/ui/Inventory.js';
 import { SignTip } from './game/ui/SignTip.js';
 import { Player } from './game/object/Player.js';
+import { Insect } from './game/object/Insect.js';
 
 class Example extends Phaser.Scene {
     constructor() {
@@ -65,7 +66,8 @@ class Example extends Phaser.Scene {
         this.createAnimations();
         this.createKeys();
         this.createLockedChests();
-        this.createInsects();
+
+        Insect.createInsectsFromTiled(this);
         this.createSprings();
         this.createSpikes();
         this.createControls();
@@ -117,28 +119,6 @@ class Example extends Phaser.Scene {
         this.player = new Player(this, CONFIG);
         this.add.existing(this.player);
         this.colliders.playerPlatform = this.physics.add.collider(this.player, this.layers.platform);
-    }
-
-    createInsects() {
-        createObjectsFromTiled({
-            scene: this,
-            arrayName: 'insects',
-            tilesetName: 'characters_1',
-            propertyName: 'isInsect',
-            spriteKey: 'characters',
-            customInit: (insect) => {
-                insect.anims.play('flying insect', true);
-                insect.setVelocity(0, 0);
-                insect._flyOriginX = insect.x;
-                insect._flyOriginY = insect.y;
-                insect._flyVX = 0;
-                insect._flyVY = 0;
-                insect._flyMaxDist = 800 + Math.random() * 16;
-                insect._flyRandom = 480 + Math.random() * 160;
-                insect._flyReturn = 0.18 + Math.random() * 0.04;
-                insect._flyDamping = 0.92 + Math.random() * 0.04;
-            }
-        });
     }
 
     createSprings() {
@@ -365,32 +345,11 @@ class Example extends Phaser.Scene {
             }
         }
     
-        // insect 随机游走动画
+        // insect 随机游走
         if (this.insects && this.insects.length) {
             for (let i = 0; i < this.insects.length; i++) {
                 const insect = this.insects[i];
-                // insect 位移逻辑
-                insect._flyVX += (Math.random() - 0.5) * 2 * insect._flyRandom * dt;
-                insect._flyVY += (Math.random() - 0.5) * 2 * insect._flyRandom * dt;
-                // 回原点吸引
-                insect._flyVX += (insect._flyOriginX - insect.x) * insect._flyReturn * dt;
-                insect._flyVY += (insect._flyOriginY - insect.y) * insect._flyReturn * dt;
-                // 阻尼
-                insect._flyVX *= insect._flyDamping;
-                insect._flyVY *= insect._flyDamping;
-                // 移动
-                insect.x += insect._flyVX * dt;
-                insect.y += insect._flyVY * dt;
-                // 限制最大活动半径
-                const dx = insect.x - insect._flyOriginX;
-                const dy = insect.y - insect._flyOriginY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > insect._flyMaxDist) {
-                    insect.x = insect._flyOriginX + dx / dist * insect._flyMaxDist;
-                    insect.y = insect._flyOriginY + dy / dist * insect._flyMaxDist;
-                    insect._flyVX *= 0.5;
-                    insect._flyVY *= 0.5;
-                }
+                insect.update(dt);
                 // 检测玩家与insect碰撞体重叠，重叠则死亡
                 if (checkBodyOverlap(this.player, insect)) {
                     this.player.die();
