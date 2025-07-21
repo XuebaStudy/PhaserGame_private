@@ -15,6 +15,7 @@ const CONFIG = {
 
 import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
 import { ScoreBoardUI } from './game/ui/ScoreBoardUI.js';
+import { InventoryUI } from './game/ui/InventoryUI.js';
 
 class Example extends Phaser.Scene {
     // 分数板UI创建
@@ -149,43 +150,24 @@ class Example extends Phaser.Scene {
 
     // 创建物品栏UI（左侧半透明格子）
     createInventoryUI() {
+        // 使用InventoryUI类创建物品栏
         const slotCount = 3;
         const slotSize = 28;
         const slotMargin = 0;
         const startX = 4;
         const startY = 80;
-        this.inventorySlots = [];
-        this.inventoryIcons = [];
-        // 用 Graphics 绘制半透明格子
-        for (let i = 0; i < slotCount; i++) {
-            const g = this.add.graphics();
-            g.fillStyle(0x000000, 0.35);
-            g.fillRoundedRect(startX, startY + i * (slotSize + slotMargin), slotSize, slotSize, 8);
-            g.lineStyle(2, 0xffffff, 0.5);
-            g.strokeRoundedRect(startX, startY + i * (slotSize + slotMargin), slotSize, slotSize, 8);
-            g.setDepth(CONFIG.DEPTH.foreground);
-            g.setScrollFactor(0);
-            this.inventorySlots.push(g);
-            // 默认隐藏物品图标
-            const icon = this.add.image(startX + slotSize / 2, startY + i * (slotSize + slotMargin) + slotSize / 2, 'things', 0);
-            icon.setVisible(false);
-            icon.setDepth(CONFIG.DEPTH.foreground + 1);
-            icon.setScrollFactor(0);
-            icon.setScale(1.0);
-            this.inventoryIcons.push(icon);
+        if (!this.inventoryUI) {
+            this.inventoryUI = new InventoryUI(this, CONFIG);
         }
+        this.inventoryUI.create(slotCount, slotSize, slotMargin, startX, startY);
     }
 
     // 更新物品栏UI（显示钥匙图标）
     updateInventoryUI() {
         // 只在第一个格子显示钥匙图标
-        if (this.hasKey) {
-            // 通用方法获取钥匙帧号
-            const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
-            this.inventoryIcons[0].setFrame(keyFrameId);
-            this.inventoryIcons[0].setVisible(true);
-        } else {
-            this.inventoryIcons[0].setVisible(false);
+        const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
+        if (this.inventoryUI) {
+            this.inventoryUI.update(this.hasKey, keyFrameId);
         }
     }
 
