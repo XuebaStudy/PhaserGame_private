@@ -16,20 +16,21 @@ const CONFIG = {
 import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
 import { ScoreBoard } from './game/ui/ScoreBoard.js';
 import { Inventory } from './game/ui/Inventory.js';
+import { SignTip } from './game/ui/SignTip.js';
 
 class Example extends Phaser.Scene {
-    // 分数板UI创建
+    // 分数板创建
     createScoreBoard() {
         this.ScoreBoard = new ScoreBoard(this, CONFIG);
         this.ScoreBoard.create();
     }
 
-    // 分数板UI刷新
-    updateScoreBoard() {
-        if (this.ScoreBoard) {
-            this.ScoreBoard.update(this.score);
-        }
+    // 告示牌提示创建
+    createSignTip() {
+        this.SignTip = new SignTip(this, CONFIG);
+        this.SignTip.create();
     }
+
     // 播放宝箱开启动画
     openChest(chestSprite) {
         // 只允许未打开的宝箱触发
@@ -86,8 +87,10 @@ class Example extends Phaser.Scene {
         // 分数
         this.score = 0;
 
-        // 分数板UI
+        // 分数板
         this.ScoreBoard = null;
+        // 告示牌提示
+        this.SignTip = null;
     }
 
     playerDie() {
@@ -145,6 +148,7 @@ class Example extends Phaser.Scene {
         this.createCamera();
         this.createInventory();
         this.createScoreBoard();
+        this.createSignTip();
         this.createSignsWithTip();
     }
 
@@ -171,7 +175,6 @@ class Example extends Phaser.Scene {
         }
     }
 
-    // ...existing code...
 
     createMap() {
         // 创建背景地图、tileset、图层
@@ -310,38 +313,25 @@ class Example extends Phaser.Scene {
                 sign._signText = text;
             }
         });
-        // 创建提示文字对象
-        this.signTipText = this.add.text(this.cameras.main.width / 2, 48, '', {
-            fontFamily: 'Arial Narrow',
-            fontSize: '16px',
-            fontStyle: 'bold',
-            color: '#000000',
-            backgroundColor: '#fffbe6',
-            padding: { left: 8, right: 8, top: 4, bottom: 4 },
-            align: 'center',
-        });
-        this.signTipText.setOrigin(0.5, 0);
-        this.signTipText.setScrollFactor(0);
-        this.signTipText.setDepth(CONFIG.DEPTH.foreground + 10);
-        this.signTipText.setVisible(false);
+        // 提示文字对象由SignTip类管理，无需重复创建
     }
 
     // 告示牌提示文字逻辑
     updateSignTipText() {
         let signFound = false;
+        let tipText = '';
         if (this.signs && this.signs.length) {
             for (let i = 0; i < this.signs.length; i++) {
                 const sign = this.signs[i];
                 if (checkBodyOverlap(this.player, sign)) {
-                    this.signTipText.setText(sign._signText || '');
-                    this.signTipText.setVisible(true);
+                    tipText = sign._signText || '';
                     signFound = true;
                     break;
                 }
             }
         }
-        if (!signFound) {
-            this.signTipText.setVisible(false);
+        if (this.SignTip) {
+            this.SignTip.update(tipText, signFound);
         }
     }
 
@@ -483,7 +473,9 @@ class Example extends Phaser.Scene {
                 if (diamond.visible && checkBodyOverlap(this.player, diamond)) {
                     diamond.setVisible(false);
                     this.score += 10;
-                    this.updateScoreBoard();
+                    if (this.ScoreBoard) {
+                        this.ScoreBoard.update(this.score);
+                    }
                 }
             }
         }
