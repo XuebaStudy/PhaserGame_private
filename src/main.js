@@ -13,50 +13,20 @@ const CONFIG = {
     }
 };
 
+import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
+import { ScoreBoardUI } from './game/ui/ScoreBoardUI.js';
+
 class Example extends Phaser.Scene {
     // 分数板UI创建
     createScoreBoard() {
-        const pad = 8;
-        const w = 75, h = 32;
-        const x = pad;
-        const y = pad;
-        // 桦木风格底色（偏淡，半透明）
-        this.scoreBg = this.add.graphics();
-        this.scoreBg.fillStyle(0xF5E9C6, 0.82); // 桦木色（淡黄白）
-        this.scoreBg.fillRoundedRect(x, y, w, h, 10);
-        // 桦木纹理（横线，淡灰色，半透明）
-        for (let i = 0; i < 4; i++) {
-            this.scoreBg.lineStyle(1, 0xD8CFC4, 0.55);
-            this.scoreBg.beginPath();
-            this.scoreBg.moveTo(x + 10, y + 8 + i * 7);
-            this.scoreBg.lineTo(x + w - 10, y + 8 + i * 7);
-            this.scoreBg.strokePath();
-        }
-        // 边框（淡棕色，半透明）
-        this.scoreBg.lineStyle(3, 0xBCA77B, 0.82);
-        this.scoreBg.strokeRoundedRect(x, y, w, h, 10);
-        this.scoreBg.setScrollFactor(0);
-        this.scoreBg.setDepth(CONFIG.DEPTH.foreground + 2);
-        // 分数文字
-        this.scoreText = this.add.text(0, 0, 'Score: 0', {
-            fontFamily: 'Arial Narrow',
-            fontSize: '16px',
-            fontStyle: 'bold',
-            color: "#000000",
-            align: 'center',
-        });
-        // 居中分数文字
-        this.scoreText.setScrollFactor(0);
-        this.scoreText.setDepth(CONFIG.DEPTH.foreground + 3);
-        this.scoreText.setOrigin(0.5, 0.5);
-        this.scoreText.x = x + w / 2;
-        this.scoreText.y = y + h / 2;
+        this.scoreBoardUI = new ScoreBoardUI(this, CONFIG);
+        this.scoreBoardUI.create();
     }
 
     // 分数板UI刷新
     updateScoreBoard() {
-        if (this.scoreText) {
-            this.scoreText.setText('Score: ' + this.score);
+        if (this.scoreBoardUI) {
+            this.scoreBoardUI.update(this.score);
         }
     }
     // 播放宝箱开启动画
@@ -89,114 +59,6 @@ class Example extends Phaser.Scene {
         };
         animate();
     }
-    // 通用工厂：批量创建对象
-    static createObjectsFromTiled({
-        scene,
-        arrayName,
-        tilesetName,
-        propertyName,
-        propertyValue = true,
-        spriteKey,
-        customInit,
-        isStatic = true
-    }) {
-        scene[arrayName] = [];
-        scene.layers.object = scene.maps.map.getObjectLayer('object');
-        const rawMap = scene.cache.tilemap.get('map1').data;
-        const phaserTileset = scene.maps.map.tilesets.find(ts => ts.name === tilesetName);
-        scene.layers.object.objects.forEach(obj => {
-            if (!phaserTileset || obj.gid < phaserTileset.firstgid || obj.gid >= phaserTileset.firstgid + phaserTileset.tileCount) return;
-            const frameId = obj.gid - phaserTileset.firstgid;
-            const match = Example.getTilePropertyFromRawTileset({
-                mapCache: rawMap,
-                tilesetName,
-                frameId,
-                propertyName,
-                propertyValue
-            });
-            if (match) {
-                // 所有对象都用 sprite 创建
-                let sprite = scene.physics.add.sprite(obj.x + obj.width / 2, obj.y - obj.height / 2, spriteKey, frameId);
-                // 如果是静态体，设置 immovable、moves=false、allowGravity=false
-                if (isStatic) {
-                    sprite.body.immovable = true;
-                    sprite.body.moves = false;
-                    sprite.body.allowGravity = false;
-                } else {
-                    sprite.body.allowGravity = false;
-                }
-                sprite.setDepth(CONFIG.DEPTH.thing);
-                Example.setObjectCollisionBox(obj, sprite, scene.maps.map);
-                if (customInit) customInit(sprite, obj, frameId);
-                scene[arrayName].push(sprite);
-            }
-        });
-    }
-
-    // 通用：从原始 Tiled tileset 判断某帧是否有指定属性
-    static getTilePropertyFromRawTileset({ mapCache, tilesetName, frameId, propertyName, propertyValue }) {
-        if (!mapCache || !mapCache.tilesets) return false;
-        const rawTileset = mapCache.tilesets.find(ts => ts.name === tilesetName);
-        if (!rawTileset || !rawTileset.tiles || !Array.isArray(rawTileset.tiles)) return false;
-        const tileObj = rawTileset.tiles.find(t => t.id === frameId);
-        if (tileObj && tileObj.properties) {
-            return tileObj.properties.some(p => p.name === propertyName && p.value === propertyValue);
-        }
-        return false;
-    }
-
-    // 静态工具：根据 Tiled 对象或 tile 设置碰撞体，自动兼容 object/tile 两种输入
-    static setObjectCollisionBox(objOrTile, sprite, map) {
-        // 支持 Tiled object（obj.gid）或 tile（obj.index）或 tile.index
-        let gid = undefined;
-        let tileInfo = undefined;
-        let tileset = undefined;
-        if (objOrTile.gid !== undefined) {
-            // Tiled object（Object Layer）
-            gid = objOrTile.gid;
-        } else if (objOrTile.index !== undefined) {
-            // tile 或 Tiled object（Tile Layer 或 Object Layer）
-            gid = objOrTile.index;
-        } else if (typeof objOrTile === 'object' && objOrTile.tilemapLayer && objOrTile.index !== undefined) {
-            // tile 对象
-            gid = objOrTile.index;
-        }
-        if (gid === undefined) return;
-        tileset = map.tilesets.find(ts => gid >= ts.firstgid && gid < ts.firstgid + ts.total);
-        if (!tileset) return;
-        const frameId = gid - tileset.firstgid;
-        tileInfo = tileset.tileData && tileset.tileData[frameId];
-        const objectgroup = tileInfo && tileInfo.objectgroup;
-        if (objectgroup && objectgroup.objects && objectgroup.objects.length > 0) {
-            const box = objectgroup.objects[0];
-            sprite.body.width = box.width;
-            sprite.body.height = box.height;
-            if (sprite.body.offset && typeof sprite.body.offset.set === 'function') {
-                sprite.body.offset.set(box.x, box.y);
-            } else {
-                sprite.body.offset = new Phaser.Math.Vector2(box.x, box.y);
-            }
-        } else {
-            // 没有objectgroup时，默认用tile本身
-            sprite.body.width = objOrTile.width;
-            sprite.body.height = objOrTile.height;
-            if (sprite.body.offset && typeof sprite.body.offset.set === 'function') {
-                sprite.body.offset.set(0, 0);
-            } else {
-                sprite.body.offset = new Phaser.Math.Vector2(0, 0);
-            }
-        }
-    }
-
-    // 静态工具：检测两个物理体是否重叠
-    static checkBodyOverlap(a, b) {
-        const ab = a.body;
-        const bb = b.body;
-        return Phaser.Geom.Intersects.RectangleToRectangle(
-            new Phaser.Geom.Rectangle(ab.x, ab.y, ab.width, ab.height),
-            new Phaser.Geom.Rectangle(bb.x, bb.y, bb.width, bb.height)
-        );
-    }
     constructor() {
         super();
         this.player = null;
@@ -222,6 +84,9 @@ class Example extends Phaser.Scene {
 
         // 分数
         this.score = 0;
+
+        // 分数板UI
+        this.scoreBoardUI = null;
     }
 
     playerDie() {
@@ -316,7 +181,7 @@ class Example extends Phaser.Scene {
         // 只在第一个格子显示钥匙图标
         if (this.hasKey) {
             // 通用方法获取钥匙帧号
-            const keyFrameId = Example.getItemFrameId(this, 'platformer_1', 'isKey', true);
+            const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
             this.inventoryIcons[0].setFrame(keyFrameId);
             this.inventoryIcons[0].setVisible(true);
         } else {
@@ -324,32 +189,7 @@ class Example extends Phaser.Scene {
         }
     }
 
-    /**
-     * 通用方法：获取第一个具有指定属性的帧号
-     * @param {Phaser.Scene} scene - 当前场景
-     * @param {string} tilesetName - tileset名称
-     * @param {string} propertyName - 属性名（如'isKey', 'isSpring', 'isLockedChest'等）
-     * @param {any} propertyValue - 属性值（通常为true）
-     * @returns {number} 帧号（未找到则返回0）
-     */
-    static getItemFrameId(scene, tilesetName, propertyName, propertyValue = true) {
-        const rawMap = scene.cache.tilemap.get('map1').data;
-        const tileset = rawMap.tilesets.find(ts => ts.name === tilesetName);
-        if (!tileset || !tileset.tiles) return 0;
-        for (let i = 0; i < tileset.tiles.length; i++) {
-            const frameId = tileset.tiles[i].id;
-            if (Example.getTilePropertyFromRawTileset({
-                mapCache: rawMap,
-                tilesetName,
-                frameId,
-                propertyName,
-                propertyValue
-            })) {
-                return frameId;
-            }
-        }
-        return 0;
-    }
+    // ...existing code...
 
     createMap() {
         // 创建背景地图、tileset、图层
@@ -383,7 +223,7 @@ class Example extends Phaser.Scene {
     }
 
     createInsects() {
-        Example.createObjectsFromTiled({
+        createObjectsFromTiled({
             scene: this,
             arrayName: 'insects',
             tilesetName: 'characters_1',
@@ -405,7 +245,7 @@ class Example extends Phaser.Scene {
     }
 
     createSprings() {
-        Example.createObjectsFromTiled({
+        createObjectsFromTiled({
             scene: this,
             arrayName: 'springs',
             tilesetName: 'platformer_1',
@@ -420,7 +260,7 @@ class Example extends Phaser.Scene {
     }
     
     createKeys() {
-        Example.createObjectsFromTiled({
+        createObjectsFromTiled({
             scene: this,
             arrayName: 'keys',
             tilesetName: 'platformer_1',
@@ -439,7 +279,7 @@ class Example extends Phaser.Scene {
     }
 
     createLockedChests() {
-        Example.createObjectsFromTiled({
+        createObjectsFromTiled({
             scene: this,
             arrayName: 'lockedChests',
             tilesetName: 'platformer_1',
@@ -461,7 +301,7 @@ class Example extends Phaser.Scene {
                 const worldX = tile.getLeft();
                 const worldY = tile.getTop();
                 const fakeSprite = { body: {} };
-                Example.setObjectCollisionBox(tile, fakeSprite, this.maps.map);
+                setObjectCollisionBox(tile, fakeSprite, this.maps.map);
 
                 fakeSprite.body.x = worldX + (fakeSprite.body.offset ? fakeSprite.body.offset.x : 0);
                 fakeSprite.body.y = worldY + (fakeSprite.body.offset ? fakeSprite.body.offset.y : 0);
@@ -472,7 +312,7 @@ class Example extends Phaser.Scene {
     
     // 批量创建告示牌对象并封装提示文字
     createSignsWithTip() {
-        Example.createObjectsFromTiled({
+        createObjectsFromTiled({
             scene: this,
             arrayName: 'signs',
             tilesetName: 'platformer_1',
@@ -510,7 +350,7 @@ class Example extends Phaser.Scene {
         if (this.signs && this.signs.length) {
             for (let i = 0; i < this.signs.length; i++) {
                 const sign = this.signs[i];
-                if (Example.checkBodyOverlap(this.player, sign)) {
+                if (checkBodyOverlap(this.player, sign)) {
                     this.signTipText.setText(sign._signText || '');
                     this.signTipText.setVisible(true);
                     signFound = true;
@@ -567,7 +407,7 @@ class Example extends Phaser.Scene {
             for (let i = 0; i < this.springs.length; i++) {
                 const spring = this.springs[i];
                 // 检查玩家是否从上方碰撞弹簧
-                if (Example.checkBodyOverlap(this.player, spring)) {
+                if (checkBodyOverlap(this.player, spring)) {
                     // 判断玩家是否从上方碰撞（玩家底部在弹簧顶部上方一定距离内，且y速度向下）
                     const playerBottom = this.player.body.y + this.player.body.height;
                     const springTop = spring.body.y;
@@ -580,7 +420,7 @@ class Example extends Phaser.Scene {
                             spring._springState = 'popped';
                             // 切换碰撞框
                             if (spring._springObj && spring._springObj.poppedBox) {
-                                Example.setObjectCollisionBox(spring._springObj.poppedBox, spring, this.maps.map);
+                                setObjectCollisionBox(spring._springObj.poppedBox, spring, this.maps.map);
                             }
                         } else if (spring._springState === 'popped') {
                             // 弹出状态，给予较小向上速度，切回未弹出
@@ -588,7 +428,7 @@ class Example extends Phaser.Scene {
                             spring.setFrame(107);
                             spring._springState = 'normal';
                             // 切换碰撞框
-                            Example.setObjectCollisionBox(spring._springObj, spring, this.maps.map);
+                            setObjectCollisionBox(spring._springObj, spring, this.maps.map);
                         }
                     }
                 }
@@ -625,7 +465,7 @@ class Example extends Phaser.Scene {
                     insect._flyVY *= 0.5;
                 }
                 // 检测玩家与insect碰撞体重叠，重叠则死亡
-                if (Example.checkBodyOverlap(this.player, insect)) {
+                if (checkBodyOverlap(this.player, insect)) {
                     this.playerDie();
                     return;
                 }
@@ -635,7 +475,7 @@ class Example extends Phaser.Scene {
         // spike碰撞检测（与insect一致，直接用checkBodyOverlap）
         if (this.spikes && this.spikes.length) {
             for (let i = 0; i < this.spikes.length; i++) {
-                if (Example.checkBodyOverlap(this.player, this.spikes[i])) {
+                if (checkBodyOverlap(this.player, this.spikes[i])) {
                     this.playerDie();
                     return;
                 }
@@ -646,7 +486,7 @@ class Example extends Phaser.Scene {
         if (this.lockedChests && this.lockedChests.length && this.hasKey) {
             for (let i = 0; i < this.lockedChests.length; i++) {
                 const chest = this.lockedChests[i];
-                if (!chest._isOpened && Example.checkBodyOverlap(this.player, chest)) {
+                if (!chest._isOpened && checkBodyOverlap(this.player, chest)) {
                     this.hasKey = false;
                     this.updateInventoryUI();
                     this.openChest(chest);
@@ -658,7 +498,7 @@ class Example extends Phaser.Scene {
         if (this.diamonds && this.diamonds.length) {
             for (let i = 0; i < this.diamonds.length; i++) {
                 const diamond = this.diamonds[i];
-                if (diamond.visible && Example.checkBodyOverlap(this.player, diamond)) {
+                if (diamond.visible && checkBodyOverlap(this.player, diamond)) {
                     diamond.setVisible(false);
                     this.score += 10;
                     this.updateScoreBoard();
@@ -670,7 +510,7 @@ class Example extends Phaser.Scene {
         if (this.keys && this.keys.length && !this.hasKey) {
             for (let i = 0; i < this.keys.length; i++) {
                 const keySprite = this.keys[i];
-                if (keySprite.visible && Example.checkBodyOverlap(this.player, keySprite)) {
+                if (keySprite.visible && checkBodyOverlap(this.player, keySprite)) {
                     this.collectKey(keySprite);
                     break;
                 }
