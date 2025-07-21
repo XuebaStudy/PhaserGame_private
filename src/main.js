@@ -1,5 +1,14 @@
 import Phaser from 'phaser';
+
 import './styles/style.css';
+
+// Vite静态资源自动加hash，需用import方式
+import platformImgUrl from '/assets/Tiled/Tilemap/platformer_1.png?url';
+import backgroundImgUrl from '/assets/Tiled/Tilemap/background_1.png?url';
+import map1Url from '/assets/Tiled/map1.json?url';
+import backgroundMap1Url from '/assets/Tiled/background_1.json?url';
+import charactersImgUrl from '/assets/Tiled/Tilemap/characters_1.png?url';
+import thingsImgUrl from '/assets/Tiled/Tilemap/platformer_1.png?url';
 
 import { createObjectsFromTiled, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
 import { ScoreBoard } from './game/ui/ScoreBoard.js';
@@ -33,13 +42,13 @@ class Example extends Phaser.Scene {
     }
 
     preload () {
-        this.load.image('platform_img', '/assets/Tiled/Tilemap/platformer_1.png');
-        this.load.tilemapTiledJSON('map1', '/assets/Tiled/map1.json');
-        this.load.image('background_img', '/assets/Tiled/Tilemap/background_1.png');
-        this.load.tilemapTiledJSON('backgroundMap1', '/assets/Tiled/background_1.json');
+        this.load.image('platform_img', platformImgUrl);
+        this.load.tilemapTiledJSON('map1', map1Url);
+        this.load.image('background_img', backgroundImgUrl);
+        this.load.tilemapTiledJSON('backgroundMap1', backgroundMap1Url);
 
-        this.load.spritesheet('characters', '/assets/Tiled/Tilemap/characters_1.png', { frameWidth: 24, frameHeight: 24, margin: 0, spacing: 1 });
-        this.load.spritesheet('things', '/assets/Tiled/Tilemap/platformer_1.png', { frameWidth: 18, frameHeight: 18, margin: 0, spacing: 1 });
+        this.load.spritesheet('characters', charactersImgUrl, { frameWidth: 24, frameHeight: 24, margin: 0, spacing: 1 });
+        this.load.spritesheet('things', thingsImgUrl, { frameWidth: 18, frameHeight: 18, margin: 0, spacing: 1 });
     }
 
     create() {
