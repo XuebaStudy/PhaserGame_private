@@ -1,3 +1,5 @@
+import Phaser from 'phaser';
+
 /**
  * 获取第一个具有指定属性的帧号
  * @param {Phaser.Scene} scene - 当前场景
@@ -24,8 +26,18 @@ export function getItemFrameId(scene, tilesetName, propertyName, propertyValue =
     }
     return 0;
 }
-import Phaser from 'phaser';
 
+/**
+ * 从 Tiled 地图对象层批量创建游戏对象并添加到场景
+ * @param {Phaser.Scene} scene - 当前场景
+ * @param {string} arrayName - 场景中存放对象的数组名
+ * @param {string} tilesetName - tileset 名称
+ * @param {string} propertyName - 需要匹配的属性名
+ * @param {any} propertyValue - 需要匹配的属性值（默认 true）
+ * @param {string} spriteKey - Phaser 资源 key
+ * @param {function} customInit - 自定义初始化回调 (sprite, obj, frameId)
+ * @param {boolean} isStatic - 是否静态物体（默认 true）
+ */
 export function createObjectsFromTiled({
     scene,
     arrayName,
@@ -67,6 +79,15 @@ export function createObjectsFromTiled({
     });
 }
 
+/**
+ * 判断指定帧号的 tile 是否具有某个属性
+ * @param {object} mapCache - 原始地图数据
+ * @param {string} tilesetName - tileset 名称
+ * @param {number} frameId - 帧号
+ * @param {string} propertyName - 属性名
+ * @param {any} propertyValue - 属性值
+ * @returns {boolean} 是否匹配
+ */
 export function getTilePropertyFromRawTileset({ mapCache, tilesetName, frameId, propertyName, propertyValue }) {
     if (!mapCache || !mapCache.tilesets) return false;
     const rawTileset = mapCache.tilesets.find(ts => ts.name === tilesetName);
@@ -78,6 +99,12 @@ export function getTilePropertyFromRawTileset({ mapCache, tilesetName, frameId, 
     return false;
 }
 
+/**
+ * 设置对象或 tile 的碰撞盒到 sprite
+ * @param {object} objOrTile - Tiled 对象或 tile
+ * @param {Phaser.GameObjects.Sprite} sprite - 目标精灵
+ * @param {Phaser.Tilemaps.Tilemap} map - Phaser 地图对象
+ */
 export function setObjectCollisionBox(objOrTile, sprite, map) {
     let gid = undefined;
     let tileInfo = undefined;
@@ -115,6 +142,12 @@ export function setObjectCollisionBox(objOrTile, sprite, map) {
     }
 }
 
+/**
+ * 检查两个物体的物理碰撞体是否重叠
+ * @param {Phaser.GameObjects.Sprite} a - 物体 A
+ * @param {Phaser.GameObjects.Sprite} b - 物体 B
+ * @returns {boolean} 是否重叠
+ */
 export function checkBodyOverlap(a, b) {
     const ab = a.body;
     const bb = b.body;

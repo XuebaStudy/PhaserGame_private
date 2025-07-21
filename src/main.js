@@ -20,48 +20,6 @@ import { SignTip } from './game/ui/SignTip.js';
 import { Player } from './game/object/Player.js';
 
 class Example extends Phaser.Scene {
-    // 分数板创建
-    createScoreBoard() {
-        this.ScoreBoard = new ScoreBoard(this, CONFIG);
-        this.ScoreBoard.create();
-    }
-
-    // 告示牌提示创建
-    createSignTip() {
-        this.SignTip = new SignTip(this, CONFIG);
-        this.SignTip.create();
-    }
-
-    // 播放宝箱开启动画
-    openChest(chestSprite) {
-        // 只允许未打开的宝箱触发
-        if (chestSprite._isOpened) return;
-        chestSprite._isOpened = true;
-        // 播放交替动画（10、11帧），最后变为9帧
-        let frameList = [10, 11];
-        let frameIdx = 0;
-        let repeatCount = 0;
-        const maxRepeat = 6; // 动画交替次数
-        const animate = () => {
-            if (repeatCount < maxRepeat) {
-                chestSprite.setFrame(frameList[frameIdx % 2]);
-                frameIdx++;
-                repeatCount++;
-                this.time.delayedCall(80, animate);
-            } else {
-                chestSprite.setFrame(9); // 最终打开状态
-                // 动画结束后生成钻石
-                const diamondFrame = 67;
-                const diamond = this.physics.add.sprite(chestSprite.x, chestSprite.y - chestSprite.body.height - 12, 'things', diamondFrame);
-                diamond.setDepth(CONFIG.DEPTH.thing + 1);
-                diamond.body.allowGravity = false;
-                diamond._isDiamond = true;
-                this.diamonds = this.diamonds || [];
-                this.diamonds.push(diamond);
-            }
-        };
-        animate();
-    }
     constructor() {
         super();
         this.player = null;
@@ -81,13 +39,10 @@ class Example extends Phaser.Scene {
 
         // 物品栏相关
         this.Inventory = null;
-        this.inventorySlots = [];
-        this.inventoryIcons = [];
         this.hasKey = false;
 
         // 分数
         this.score = 0;
-
         // 分数板
         this.ScoreBoard = null;
         // 告示牌提示
@@ -116,8 +71,8 @@ class Example extends Phaser.Scene {
         this.createControls();
         this.createCamera();
         this.createInventory();
-        this.createScoreBoard();
-        this.createSignTip();
+        this.ScoreBoard = new ScoreBoard(this, CONFIG);
+        this.SignTip = new SignTip(this, CONFIG);
         this.createSignsWithTip();
     }
 
@@ -134,16 +89,6 @@ class Example extends Phaser.Scene {
         }
         this.Inventory.create(slotCount, slotSize, slotMargin, startX, startY);
     }
-
-    // 更新物品栏UI（显示钥匙图标）
-    updateInventory() {
-        // 只在第一个格子显示钥匙图标
-        const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
-        if (this.Inventory) {
-            this.Inventory.update(this.hasKey, keyFrameId);
-        }
-    }
-
 
     createMap() {
         // 创建背景地图、tileset、图层
@@ -283,25 +228,6 @@ class Example extends Phaser.Scene {
         // 提示文字对象由SignTip类管理，无需重复创建
     }
 
-    // 告示牌提示文字逻辑
-    updateSignTipText() {
-        let signFound = false;
-        let tipText = '';
-        if (this.signs && this.signs.length) {
-            for (let i = 0; i < this.signs.length; i++) {
-                const sign = this.signs[i];
-                if (checkBodyOverlap(this.player, sign)) {
-                    tipText = sign._signText || '';
-                    signFound = true;
-                    break;
-                }
-            }
-        }
-        if (this.SignTip) {
-            this.SignTip.update(tipText, signFound);
-        }
-    }
-
     createControls() {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasdKeys = this.input.keyboard.addKeys('W,S,A,D');
@@ -339,8 +265,73 @@ class Example extends Phaser.Scene {
         });
     }
 
+    // 更新物品栏UI
+    updateInventory() {
+        // 只在第一个格子显示钥匙图标
+        const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
+        if (this.Inventory) {
+            this.Inventory.update(this.hasKey, keyFrameId);
+        }
+    }
+
+    // 告示牌提示文字逻辑
+    updateSignTipText() {
+        let signFound = false;
+        let tipText = '';
+        if (this.signs && this.signs.length) {
+            for (let i = 0; i < this.signs.length; i++) {
+                const sign = this.signs[i];
+                if (checkBodyOverlap(this.player, sign)) {
+                    tipText = sign._signText || '';
+                    signFound = true;
+                    break;
+                }
+            }
+        }
+        if (this.SignTip) {
+            this.SignTip.update(tipText, signFound);
+        }
+    }
+
+    // 宝箱开启
+    openChest(chestSprite) {
+        // 只允许未打开的宝箱触发
+        if (chestSprite._isOpened) return;
+        chestSprite._isOpened = true;
+        // 播放交替动画（10、11帧），最后变为9帧
+        let frameList = [10, 11];
+        let frameIdx = 0;
+        let repeatCount = 0;
+        const maxRepeat = 6; // 动画交替次数
+        const animate = () => {
+            if (repeatCount < maxRepeat) {
+                chestSprite.setFrame(frameList[frameIdx % 2]);
+                frameIdx++;
+                repeatCount++;
+                this.time.delayedCall(80, animate);
+            } else {
+                chestSprite.setFrame(9); // 最终打开状态
+                // 动画结束后生成钻石
+                const diamondFrame = 67;
+                const diamond = this.physics.add.sprite(chestSprite.x, chestSprite.y - chestSprite.body.height - 12, 'things', diamondFrame);
+                diamond.setDepth(CONFIG.DEPTH.thing + 1);
+                diamond.body.allowGravity = false;
+                diamond._isDiamond = true;
+                this.diamonds = this.diamonds || [];
+                this.diamonds.push(diamond);
+            }
+        };
+        animate();
+    }
+
     update (time, delta){
         const dt = delta / 1000;
+
+        // 告示牌提示文字逻辑
+        this.updateSignTipText();
+        // 更新物品栏UI
+        this.updateInventory();
+
         // 弹簧逻辑
         if (this.springs && this.springs.length) {
             for (let i = 0; i < this.springs.length; i++) {
@@ -373,9 +364,6 @@ class Example extends Phaser.Scene {
                 }
             }
         }
-        // 告示牌提示文字逻辑
-        this.updateSignTipText();
-
     
         // insect 随机游走动画
         if (this.insects && this.insects.length) {
@@ -411,7 +399,7 @@ class Example extends Phaser.Scene {
             }
         }
 
-        // spike碰撞检测（与insect一致，直接用checkBodyOverlap）
+        // spike碰撞检测
         if (this.spikes && this.spikes.length) {
             for (let i = 0; i < this.spikes.length; i++) {
                 if (checkBodyOverlap(this.player, this.spikes[i])) {
@@ -433,6 +421,7 @@ class Example extends Phaser.Scene {
                 }
             }
         }
+
         // 钻石收集判定
         if (this.diamonds && this.diamonds.length) {
             for (let i = 0; i < this.diamonds.length; i++) {
@@ -458,16 +447,12 @@ class Example extends Phaser.Scene {
             }
         }
 
-        // 更新物品栏UI（防止UI丢失）
-        this.updateInventory();
-
         // 梯子检测
         let onLadder = false;
         const ladderTile = this.layers.thing.getTileAtWorldXY(this.player.x, this.player.y + this.player.body.height / 2);
         if (ladderTile && ladderTile.properties && ladderTile.properties.isLadder === true) {
             onLadder = true;
         }
-
         if (onLadder) {
             this.player.body.allowGravity = false;
             if (this.wasdKeys.W.isDown) {

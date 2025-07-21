@@ -4,6 +4,8 @@ export class SignTip {
         this.scene = scene;
         this.config = config;
         this.tipText = null;
+
+        this.create();
     }
 
     create() {

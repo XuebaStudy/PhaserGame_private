@@ -5,6 +5,8 @@ export class Inventory {
         this.config = config;
         this.inventorySlots = [];
         this.inventoryIcons = [];
+
+        this.create();
     }
 
     create(slotCount = 3, slotSize = 28, slotMargin = 0, startX = 4, startY = 80) {
