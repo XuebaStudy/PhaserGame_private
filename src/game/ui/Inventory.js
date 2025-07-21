@@ -1,5 +1,5 @@
-// 物品栏UI类，负责物品栏的创建和刷新
-export class InventoryUI {
+// 物品栏类，负责物品栏的创建和刷新
+export class Inventory {
     constructor(scene, config) {
         this.scene = scene;
         this.config = config;

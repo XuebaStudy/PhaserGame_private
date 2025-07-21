@@ -14,20 +14,20 @@ const CONFIG = {
 };
 
 import { createObjectsFromTiled, getTilePropertyFromRawTileset, setObjectCollisionBox, checkBodyOverlap, getItemFrameId } from './game/utils/GameUtils.js';
-import { ScoreBoardUI } from './game/ui/ScoreBoardUI.js';
-import { InventoryUI } from './game/ui/InventoryUI.js';
+import { ScoreBoard } from './game/ui/ScoreBoard.js';
+import { Inventory } from './game/ui/Inventory.js';
 
 class Example extends Phaser.Scene {
     // 分数板UI创建
     createScoreBoard() {
-        this.scoreBoardUI = new ScoreBoardUI(this, CONFIG);
-        this.scoreBoardUI.create();
+        this.ScoreBoard = new ScoreBoard(this, CONFIG);
+        this.ScoreBoard.create();
     }
 
     // 分数板UI刷新
     updateScoreBoard() {
-        if (this.scoreBoardUI) {
-            this.scoreBoardUI.update(this.score);
+        if (this.ScoreBoard) {
+            this.ScoreBoard.update(this.score);
         }
     }
     // 播放宝箱开启动画
@@ -78,7 +78,7 @@ class Example extends Phaser.Scene {
         this.diamonds = [];
 
         // 物品栏相关
-        this.inventoryUI = null;
+        this.Inventory = null;
         this.inventorySlots = [];
         this.inventoryIcons = [];
         this.hasKey = false;
@@ -87,7 +87,7 @@ class Example extends Phaser.Scene {
         this.score = 0;
 
         // 分数板UI
-        this.scoreBoardUI = null;
+        this.ScoreBoard = null;
     }
 
     playerDie() {
@@ -143,31 +143,31 @@ class Example extends Phaser.Scene {
         this.createSpikes();
         this.createControls();
         this.createCamera();
-        this.createInventoryUI();
+        this.createInventory();
         this.createScoreBoard();
         this.createSignsWithTip();
     }
 
     // 创建物品栏UI（左侧半透明格子）
-    createInventoryUI() {
-        // 使用InventoryUI类创建物品栏
+    createInventory() {
+        // 使用Inventory类创建物品栏
         const slotCount = 3;
         const slotSize = 28;
         const slotMargin = 0;
         const startX = 4;
         const startY = 80;
-        if (!this.inventoryUI) {
-            this.inventoryUI = new InventoryUI(this, CONFIG);
+        if (!this.Inventory) {
+            this.Inventory = new Inventory(this, CONFIG);
         }
-        this.inventoryUI.create(slotCount, slotSize, slotMargin, startX, startY);
+        this.Inventory.create(slotCount, slotSize, slotMargin, startX, startY);
     }
 
     // 更新物品栏UI（显示钥匙图标）
-    updateInventoryUI() {
+    updateInventory() {
         // 只在第一个格子显示钥匙图标
         const keyFrameId = getItemFrameId(this, 'platformer_1', 'isKey', true);
-        if (this.inventoryUI) {
-            this.inventoryUI.update(this.hasKey, keyFrameId);
+        if (this.Inventory) {
+            this.Inventory.update(this.hasKey, keyFrameId);
         }
     }
 
@@ -256,7 +256,7 @@ class Example extends Phaser.Scene {
         if (!this.hasKey) {
             this.hasKey = true;
             keySprite.setVisible(false);
-            this.updateInventoryUI();
+            this.updateInventory();
         }
     }
 
@@ -470,7 +470,7 @@ class Example extends Phaser.Scene {
                 const chest = this.lockedChests[i];
                 if (!chest._isOpened && checkBodyOverlap(this.player, chest)) {
                     this.hasKey = false;
-                    this.updateInventoryUI();
+                    this.updateInventory();
                     this.openChest(chest);
                     break;
                 }
@@ -500,7 +500,7 @@ class Example extends Phaser.Scene {
         }
 
         // 更新物品栏UI（防止UI丢失）
-        this.updateInventoryUI();
+        this.updateInventory();
 
         // 梯子检测
         let onLadder = false;
