@@ -1,6 +1,11 @@
 @echo off
 
 echo.
+echo ==== Git push <main> branch ====
+git push origin main > nul
+
+
+echo.
 echo ==== Build Start ====
 call npm run build > nul
 

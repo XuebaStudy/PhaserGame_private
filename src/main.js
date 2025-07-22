@@ -23,8 +23,10 @@ const CONFIG = {
     GAME_SCALE: 1,
     DEPTH: {
         background: 0,
-        thing: 1,
-        player: 3,
+        platform: 2,
+        falling_water: 3,
+        thing: 4,
+        player: 5,
         foreground: 10
     }
 };
@@ -97,8 +99,13 @@ class Example extends Phaser.Scene {
         this.maps.map = this.make.tilemap({ key: 'map1' });
         this.tiles.map = this.maps.map.addTilesetImage('platformer_1', 'platform_img');
         this.layers.platform = this.maps.map.createLayer(0, this.tiles.map, 0, 0);
-        this.layers.thing = this.maps.map.createLayer(1, this.tiles.map, 0, 0);
+        this.layers.platform.setDepth(CONFIG.DEPTH.platform);
+        this.layers.falling_water = this.maps.map.createLayer(1, this.tiles.map, 0, 0);
+        this.layers.falling_water.setDepth(CONFIG.DEPTH.falling_water);
+        this.layers.thing = this.maps.map.createLayer(2, this.tiles.map, 0, 0);
         this.layers.thing.setDepth(CONFIG.DEPTH.thing);
+        
+
 
         // 设置基于 Solid 属性的碰撞检测
         this.layers.platform.setCollisionByProperty({ isSolid: true });
@@ -462,7 +469,7 @@ class Example extends Phaser.Scene {
         this.player.updateControls(this.wasdKeys, this.colliders, this.layers);
         
         // 掉出世界边界处理
-        if (this.player.y > this.cameras.main.height) {
+        if (this.player.y > this.maps.map.heightInPixels) {
             this.player.die();
         }
         // 左右边界限制（基于地图宽度和角色宽度）

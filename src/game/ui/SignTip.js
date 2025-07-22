@@ -9,7 +9,7 @@ export class SignTip {
     }
 
     create() {
-        this.tipText = this.scene.add.text(this.scene.cameras.main.width / 2, 48, '', {
+        this.tipText = this.scene.add.text(this.scene.cameras.main.width / 2, 36, '', {
             fontFamily: 'Arial Narrow',
             fontSize: '16px',
             fontStyle: 'bold',
@@ -21,6 +21,7 @@ export class SignTip {
         this.tipText.setOrigin(0.5, 0);
         this.tipText.setScrollFactor(0);
         this.tipText.setDepth(this.config.DEPTH.foreground + 10);
+        this.tipText.setAlpha(0.9); // 设置半透明
         this.tipText.setVisible(false);
     }
 
