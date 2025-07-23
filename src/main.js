@@ -24,9 +24,9 @@ const CONFIG = {
     DEPTH: {
         background: 0,
         platform: 2,
-        falling_water: 3,
         thing: 4,
         player: 5,
+        falling_water: 7,
         foreground: 10
     }
 };
